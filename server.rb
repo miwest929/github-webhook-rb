@@ -1,5 +1,10 @@
 require 'sinatra'
 require 'json'
+require 'octokit'
+require 'yaml'
+
+oauth_config = YAML.load_file("oauth.yml")
+GITHUB = Octokit::Client.new(access_token: oauth_config['access_token'])
 
 post '/payload' do
   push = JSON.parse(request.body.read)
