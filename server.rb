@@ -4,6 +4,8 @@ require 'octokit'
 require 'yaml'
 require 'byebug'
 
+# ngrok 4567
+
 # TODO: Can't get it working with Oauth2 (client_id and client_secret)
 #       But works great for Oauth (access_token)
 oauth_config = YAML.load_file("oauth.yml")
