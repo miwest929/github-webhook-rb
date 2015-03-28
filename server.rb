@@ -2,9 +2,21 @@ require 'sinatra'
 require 'json'
 require 'octokit'
 require 'yaml'
+require 'byebug'
 
+# TODO: Can't get it working with Oauth2 (client_id and client_secret)
+#       But works great for Oauth (access_token)
 oauth_config = YAML.load_file("oauth.yml")
-GITHUB = Octokit::Client.new(access_token: oauth_config['access_token'])
+CLIENT_ID = oauth_config['client_id']
+CLIENT_SECRET = oauth_config['client_secret']
+GITHUB = Octokit::Client.new({
+  client_id: CLIENT_ID,
+  client_secret: CLIENT_SECRET
+})
+
+get '/callback' do
+  puts "Callback route invoked"
+end
 
 post '/payload' do
   push = JSON.parse(request.body.read)
@@ -49,8 +61,16 @@ class PullRequestHandler
     title = @payload['pull_request']['title']
     description = @payload['pull_request']['body']
 
+    repo = @payload['pull_request']['head']['repo']
+    owner = repo['owner']['login']
+    name = repo['name']
+    number = @payload['number']
+
     unless /MCC\-(\d)+ /.match(title)
       puts "Please put the MCC number in the Pull Request!"
+      GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
+        body: 'Please put the MCC number in the Pull Request'
+      })
     end
 
     unless description
