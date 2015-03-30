@@ -9,11 +9,13 @@ require 'byebug'
 # TODO: Can't get it working with Oauth2 (client_id and client_secret)
 #       But works great for Oauth (access_token)
 oauth_config = YAML.load_file("oauth.yml")
-CLIENT_ID = oauth_config['client_id']
-CLIENT_SECRET = oauth_config['client_secret']
+ACCESS_TOKEN = oauth_config['gumby_access_token']
+#CLIENT_ID = oauth_config['client_id']
+#CLIENT_SECRET = oauth_config['client_secret']
 GITHUB = Octokit::Client.new({
-  client_id: CLIENT_ID,
-  client_secret: CLIENT_SECRET
+  access_token: ACCESS_TOKEN
+#  client_id: CLIENT_ID,
+#  client_secret: CLIENT_SECRET
 })
 
 get '/callback' do
