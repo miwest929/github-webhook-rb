@@ -73,12 +73,15 @@ class PullRequestHandler
     unless /MCC\-(\d)+ /.match(title)
       puts "Please put the MCC number in the Pull Request!"
       GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
-        body: 'Please put the MCC number in the Pull Request'
+        body: 'Please put the MCC number in the Pull Request.'
       })
     end
 
     unless description
       puts "Please put provide a description to your Pull Request!"
+      GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
+        body: 'Please add a description to your Pull Request.'
+      })
     end
   end
 end
