@@ -77,7 +77,7 @@ class PullRequestHandler
       })
     end
 
-    unless description
+    unless (description && description != "")
       puts "Please put provide a description to your Pull Request!"
       GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
         body: 'Please add a description to your Pull Request.'
