@@ -56,32 +56,60 @@ class GithubWebhook
   end
 end
 
+class BaseCheck
+  def initialize(payload)
+    @data = payload
+  end
+
+end
+
+class TitleMissingMCCNumberCheck < BaseCheck
+  def check
+    title = @data['title']
+
+    /MCC\-(\d)+ /.match(title)
+  end
+
+  def msg
+    'Please put the MCC number in the Pull Request.'
+  end
+end
+
+class DescriptionMissingCheck < BaseCheck
+  def check
+    description = @data['body']
+
+    description && description != ""
+  end
+
+  def msg
+    'Please add a description to your Pull Request.'
+  end
+end
+
 class PullRequestHandler
   def initialize(payload)
     @payload = payload
   end
 
   def handle
-    title = @payload['pull_request']['title']
-    description = @payload['pull_request']['body']
-
     repo = @payload['pull_request']['head']['repo']
     owner = repo['owner']['login']
     name = repo['name']
     number = @payload['number']
 
-    unless /MCC\-(\d)+ /.match(title)
-      puts "Please put the MCC number in the Pull Request!"
-      GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
-        body: 'Please put the MCC number in the Pull Request.'
-      })
-    end
+    checks = [TitleMissingMCCNumberCheck, DescriptionMissingCheck]
+    msgs = checks.map do |c|
+      cond = c.new(@payload['pull_request'])
 
-    unless (description && description != "")
-      puts "Please put provide a description to your Pull Request!"
-      GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
-        body: 'Please add a description to your Pull Request.'
-      })
-    end
+      cond.check ? nil : cond.msg
+    end.compact
+    msgs = msgs.map {|m| "  - #{m}"}
+
+    pr_comment = "Please address the following:\n#{msgs.join("\n")}"
+    puts pr_comment
+    GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
+      body: pr_comment
+    })
   end
 end
