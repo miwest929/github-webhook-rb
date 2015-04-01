@@ -26,8 +26,27 @@ post '/payload' do
   push = JSON.parse(request.body.read)
 
   GithubWebhook.new.receive(push)
-  #puts "I got some JSON: #{push.inspect}"
 end
+
+=begin
+  on(eventType)
+
+  evenType can be:
+    commit_comment
+    create (branch/tag created)
+    delete (branch/tag deleted)
+    pull_request_review_comment
+    pull_request
+    push (default event)
+
+    on(pullrequest.opened) do |pr|
+      if pr.description.empty?
+        comment('add a description!')
+      end
+    end
+
+  when(pull_request
+=end
 
 class GithubWebhook
   def initialize
@@ -60,7 +79,6 @@ class BaseCheck
   def initialize(payload)
     @data = payload
   end
-
 end
 
 class TitleMissingMCCNumberCheck < BaseCheck
@@ -87,29 +105,57 @@ class DescriptionMissingCheck < BaseCheck
   end
 end
 
+class PullRequest
+  def initialize(owner, name, number)
+    @owner  = owner
+    @name   = name
+    @number = number
+  end
+
+  #TODO: Currently fails. 
+  #      Octokit::NotFound - POST https://api.github.com/repos/miwest929/noun_phrase_extractor/issues/2/labels: 404 - Not Found // See: https://developer.github.com/v3/issues/labels/#add-labels-to-an-issue:
+  def add_labels(labels)
+    GITHUB.post("#{github_pr_url}/labels", labels)
+  end
+
+  def comment(comment_msg)
+    return if (comment_msg.nil? || comment_msg == "")
+
+    GITHUB.post("#{github_pr_url}/comments", {
+      body: comment_msg
+    })
+  end
+
+private
+  def github_pr_url
+    "/repos/#{@owner}/#{@name}/issues/#{@number}"
+  end
+end
+
 class PullRequestHandler
   def initialize(payload)
     @payload = payload
   end
 
   def handle
-    repo = @payload['pull_request']['head']['repo']
-    owner = repo['owner']['login']
-    name = repo['name']
-    number = @payload['number']
-
     checks = [TitleMissingMCCNumberCheck, DescriptionMissingCheck]
     msgs = checks.map do |c|
       cond = c.new(@payload['pull_request'])
 
       cond.check ? nil : cond.msg
     end.compact
-    msgs = msgs.map {|m| "  - #{m}"}
 
-    pr_comment = "Please address the following:\n#{msgs.join("\n")}"
+    pr_comment = msgs.map {|m| "  - #{m}"}.join("\n")
+
+    repo = @payload['pull_request']['head']['repo']
+    owner = repo['owner']['login']
+    name = repo['name']
+    number = @payload['number']
+    pr = PullRequest.new(owner, name, number)
+
     puts pr_comment
-    GITHUB.post("/repos/#{owner}/#{name}/issues/#{number}/comments", {
-      body: pr_comment
-    })
+    pr.comment(pr_comment)
+
+#    pr.add_labels(['gumby'])
   end
 end
